@@ -38,7 +38,7 @@ ALLOWED_HOSTS = ["*"]
 # Application definition
 
 INSTALLED_APPS = [
-    'simpleui',
+    "simpleui",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "ocr",
     "users",
     "rest_framework",
+    "database",
 ]
 
 MIDDLEWARE = [
@@ -133,6 +134,9 @@ STATIC_URL = "/static/"
 # 配置静态文件加载路径
 STATICFILES_DIRS = [os.path.join(BASE_DIR.parent, "static")]
 
+# 媒体上传文件路径
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR.parent, "media")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
@@ -168,7 +172,59 @@ AUTHENTICATION_BACKENDS = ["users.utils.UsernameMobileAuthBackend"]
 
 
 ################## SimpleUI 配置 #################
-SIMPLEUI_LOGO = 'https://avatars2.githubusercontent.com/u/13825909?s=40&v=4'
+SIMPLEUI_LOGO = "https://tuchuang-1301374207.cos.ap-nanjing.myqcloud.com/img/logo.png"
 SIMPLEUI_HOME_INFO = False
-SIMPLEUI_HOME_TITLE = 'Django Admin'
-SIMPLEUI_HOME_ICON = 'fa fa-cloud'
+SIMPLEUI_HOME_TITLE = "保险单据智能处理系统"
+# https://fontawesome.com/icons
+SIMPLEUI_HOME_ICON = "fa fa-cloud"
+
+
+SIMPLEUI_CONFIG = {
+    "system_keep": False,
+    "menu_display": [
+        "用户管理",
+        "数据管理",
+    ],  # 开启排序和过滤功能, 不填此字段为默认排序和全部显示, 空列表[] 为全部不显示.
+    "dynamic": True,  # 设置是否开启动态菜单, 默认为False. 如果开启, 则会在每次用户登陆时动态展示菜单内容
+    "menus": [
+        {
+            "app": "users",
+            "name": "用户管理",
+            "icon": "fas fa-user-shield",
+            "models": [
+                {"name": "用户", "icon": "fa fa-user", "url": "users/user/"},
+                {
+                    "name": "组",
+                    "icon": "fa-solid fa-group-arrows-rotate",
+                    "url": "auth/group/",
+                },
+            ],
+        },
+        {
+            "name": "数据管理",
+            "icon": "fa fa-desktop",
+            "app": "database",
+            "models": [
+                {
+                    "name": "保险单据",
+                    "url": "database/insurancedocument",
+                    # "icon": "far fa-surprise",
+                },
+                {
+                    "name": "保单类型",
+                    "url": "database/insurancedocumenttype",
+                    # "icon": "far fa-surprise",
+                },
+                {
+                    "name": "保单分析结果",
+                    "url": "database/documentanalysisresult",
+                    # "icon": "far fa-surprise",
+                },
+                {
+                    "name": "关键信息",
+                    "url": "database/keyinformation",
+                },
+            ],
+        },
+    ],
+}

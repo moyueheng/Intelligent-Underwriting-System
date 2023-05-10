@@ -134,6 +134,6 @@ migrations
 # vscode
 .vscode
 test
-PaddleOCR-2.6.0*
+PaddleOCR*
 tmp*
 media

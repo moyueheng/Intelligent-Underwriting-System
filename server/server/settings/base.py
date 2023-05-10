@@ -217,11 +217,6 @@ SIMPLEUI_CONFIG = {
                 },
                 {
                     "name": "保单分析结果",
-                    "url": "database/documentanalysisresult",
-                    # "icon": "far fa-surprise",
-                },
-                {
-                    "name": "关键信息",
                     "url": "database/keyinformation",
                 },
             ],

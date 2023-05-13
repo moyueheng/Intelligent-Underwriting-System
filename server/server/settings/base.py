@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_json_widget",
+    "import_export",
     "ocr",
     "users",
     "rest_framework",
@@ -117,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "zh-hans"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Shanghai"
 
 USE_I18N = True
 
@@ -144,24 +146,24 @@ MEDIA_ROOT = os.path.join(BASE_DIR.parent, "media")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "file": {
-            "level": "DEBUG",
-            "class": "logging.FileHandler",
-            "filename": pjoin(BASE_DIR, "logs/debug.log"),
-        },
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["file"],
-            "level": "DEBUG",
-            "propagate": True,
-        },
-    },
-}
+# LOGGING = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "handlers": {
+#         "file": {
+#             "level": "DEBUG",
+#             "class": "logging.FileHandler",
+#             "filename": pjoin(BASE_DIR, "logs/debug.log"),
+#         },
+#     },
+#     "loggers": {
+#         "django": {
+#             "handlers": ["file"],
+#             "level": "DEBUG",
+#             "propagate": True,
+#         },
+#     },
+# }
 
 
 # 指定本项目用户模型类
@@ -177,7 +179,8 @@ SIMPLEUI_HOME_INFO = False
 SIMPLEUI_HOME_TITLE = "保险单据智能处理系统"
 # https://fontawesome.com/icons
 SIMPLEUI_HOME_ICON = "fa fa-cloud"
-
+SIMPLEUI_ANALYSIS = False
+SIMPLEUI_INDEX = "https://www.yuque.com/moyueheng"
 
 SIMPLEUI_CONFIG = {
     "system_keep": False,
@@ -206,18 +209,14 @@ SIMPLEUI_CONFIG = {
             "app": "database",
             "models": [
                 {
-                    "name": "保险单据",
+                    "name": "单据识别",
                     "url": "database/insurancedocument",
                     # "icon": "far fa-surprise",
                 },
                 {
-                    "name": "保单类型",
+                    "name": "单据类型",
                     "url": "database/insurancedocumenttype",
                     # "icon": "far fa-surprise",
-                },
-                {
-                    "name": "保单分析结果",
-                    "url": "database/keyinformation",
                 },
             ],
         },

@@ -133,7 +133,7 @@ dmypy.json
 migrations
 # vscode
 .vscode
-test
+test*
 PaddleOCR*
 tmp*
 media

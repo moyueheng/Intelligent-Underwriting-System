@@ -24,3 +24,14 @@ http://127.0.0.1:8000/admin
 # 问题
 
 https://juejin.cn/post/7149915647902744589
+
+# 开始
+
+#### 构建容器镜像
+```
+docker build -t ius .
+```
+#### 运行容器
+```
+docker run -it -p 8000:8000 --name ius_container ius
+```

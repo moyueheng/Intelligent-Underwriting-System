@@ -2,20 +2,14 @@ from django.db import models
 from users.models import User
 
 # Create your models here.
+from django.utils.safestring import mark_safe
 
 from django.db import models
 from os.path import join as pjoin
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-import sys
 
-sys.path.append(
-    "/root/BS/Intelligent-Underwriting-System/server/apps/database/PaddleOCR-release-2.6"
-)
-sys.path.append(
-    "/root/BS/Intelligent-Underwriting-System/server/apps/database/PaddleOCR-release-2.6/ppstructure/kie"
-)
-from ppstructure.kie.predict_kie_token_ser_re import run
+# from django.settings import BASE_DIR
+from django.conf import settings
+
 
 # 保险单据类型
 class InsuranceDocumentType(models.Model):
@@ -30,7 +24,7 @@ class InsuranceDocumentType(models.Model):
 
     class Meta:
         db_table = "insurance_document_types"
-        verbose_name = "保单类型"
+        verbose_name = "单据类型"
 
     def __str__(self) -> str:
         return self.name
@@ -40,14 +34,20 @@ class InsuranceDocument(models.Model):
     """保单模型类"""
 
     # 一个用户可以有多个保单
+    # 默认选择我现在登陆的用户
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, verbose_name="用户", help_text="用户"
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="用户",
+        help_text="不用选择, 默认为当前登陆用户",
+        null=True,
+        blank=True,
     )
     document_type = models.ForeignKey(
         InsuranceDocumentType,
         on_delete=models.CASCADE,
-        verbose_name="保单类型",
-        help_text="保单类型",
+        verbose_name="单据类型",
+        help_text="必须选择类型",
     )
 
     STATUS = (
@@ -58,41 +58,33 @@ class InsuranceDocument(models.Model):
     )
     # 保单文件上传到media/documents/年/月/日/目录下, 必须上传文件, 保单文件名唯一
     document_file = models.ImageField(
-        upload_to="documents/%Y/%m/%d/", verbose_name="保单文件", help_text="保单文件"
+        upload_to="documents/%Y/%m/%d/", verbose_name="单据文件", help_text="单据文件, 必须上传文件"
     )
+    kie_time = models.FloatField(verbose_name="关键信息抽取时间", help_text="单位为秒", default=0.0)
+
+    def kie_time_tag(self):
+        return "{:.2f} s".format(self.kie_time)
+    
+    kie_time_tag.short_description = "关键信息抽取时间"
 
     upload_time = models.DateTimeField(
         auto_now_add=True, verbose_name="上传时间", help_text="上传时间"
     )
+
+    # 更新时间
+    update_time = models.DateTimeField(
+        auto_now=True, verbose_name="更新时间", help_text="更新时间", null=True, blank=True
+    )
+
     # 保单状态: 未分析, 分析中, 分析完成, 分析失败, 可选的
     status = models.CharField(
         max_length=8,
-        verbose_name="保单状态",
+        verbose_name="抽取状态",
         choices=STATUS,
-        help_text="保单状态",
+        help_text="抽取状态",
         default="未分析",
     )
 
-    class Meta:
-        db_table = "insurance_documents"
-        verbose_name = "保单"
-
-    def __str__(self) -> str:
-        return (
-            "上传时间: "
-            + self.upload_time.strftime("%Y-%m-%d %H:%M:%S")
-            + ", 状态: "
-            + self.status
-        )
-
-
-class KeyInformation(models.Model):
-    """关键信息模型类"""
-
-    # 一个保单可以有多个关键信息分析结果
-    insurance_document_id = models.ForeignKey(
-        InsuranceDocument, on_delete=models.CASCADE, verbose_name="保单", help_text="保单"
-    )
     insured_name = models.CharField(
         max_length=50, verbose_name="被保险人姓名", help_text="被保险人姓名", default="未知"
     )
@@ -109,56 +101,98 @@ class KeyInformation(models.Model):
         verbose_name="保险金额", help_text="保险金额", default=0
     )
 
+    # 在详细后台显示图片
+    def img_tag(self):
+        """
+        <div style="display: flex; justify-content: space-around; border: 2px solid black; padding: 20px;">
+            <img src="image1.jpg" alt="Image 1" width="400" style="border: 2px solid red;">
+            <img src="image2.jpg" alt="Image 2" width="400" style="border: 2px solid red;">
+        </div>
+        """
+        html_str = """<h2>提示:
+            <span style="color:red">红色框为key</span>, 
+            <span style="color:blue">蓝色框为value</span>, 
+            <span style="color:green">绿色线为key和value的对应</span>
+            </h2>
+        <div style="display: flex; justify-content: space-around;  padding: 5px;">"""
+        if self.document_file:
+            html_str += '<img src="{}" style="width: 100%; max-width: 600px; border: 2px solid black;" />'.format(
+                self.document_file.url
+            )
+        if self.kie_result_img:
+            html_str += '<img src="{}" style="width: 100%; max-width: 600px;border: 2px solid black;" />'.format(
+                self.kie_result_img.url
+            )
+        html_str += "</div>"
+        return mark_safe(html_str)
+
+    img_tag.short_description = "大图对比"
+
+    def document_file_tag(self):
+        if self.document_file:
+            return mark_safe(
+                '<img src="{}" width="300" height="300" />'.format(
+                    self.document_file.url
+                )
+            )
+        return "未上传单据文件"
+
+    document_file_tag.short_description = "原始图片文件"
+
+    def kie_result_img_tag(self):
+        if self.kie_result_img:
+            return mark_safe(
+                '<img src="{}" width="300" height="300" />'.format(
+                    self.kie_result_img.url
+                )
+            )
+        return "未识别成功"
+
+    kie_result_img_tag.short_description = "关键信息抽取图片文件"
+
     # 完整结果
-    result = models.JSONField(verbose_name="分析结果", help_text="分析结果")
-    # 关键信息
-    key_information = models.JSONField(
-        verbose_name="关键信息", help_text="关键信息", default=dict
+    kie_result = models.JSONField(
+        verbose_name="关键信息检测完整识别结果", help_text="以json形式展示", null=True, blank=True
     )
-    # 可视化结果
-    result_img = models.ImageField(verbose_name="可视化识别结果", help_text="可视化结果")
+    # 后处理分析结果
+    kie_information = models.JSONField(
+        verbose_name="关键信息检测完整识别结果",
+        help_text="后处理后分析结果",
+        default=dict,
+        null=True,
+        blank=True,
+    )
+    # 关键信息抽取结果
+    kie_result_img = models.ImageField(
+        verbose_name="关键信息抽取可视化结果", help_text="以图片形式展示", null=True, blank=True
+    )
+    # 关键信息抽取识别数量
+    kie_result_num = models.IntegerField(
+        verbose_name="关键信息抽取识别数量",
+        help_text="关键信息抽取识别数量",
+        default=0,
+        null=True,
+        blank=True,
+    )
+    # 表格识别结果
+    table_result = models.JSONField(
+        verbose_name="表格识别结果", help_text="表格识别结果", default=dict, null=True, blank=True
+    )
+    # 表格识别可视化结果
+    table_result_img = models.ImageField(
+        verbose_name="表格识别可视化结果", help_text="以图片形式展示", null=True, blank=True
+    )
 
     class Meta:
-        db_table = "key_information"
-        verbose_name = "关键信息"
+        db_table = "insurance_documents"
+        verbose_name = "保单"
 
-
-# 监听InsuranceDocument模型创建
-@receiver(post_save, sender=InsuranceDocument)
-def create_insurance_document(sender, instance, created, **kwargs):
-    # 如果是新创建的保单, 则创建关键信息模型
-    if created:
-        # 调用模型进行检测
-        # media_root = '/root/BS/Intelligent-Underwriting-System/server/media'
-        re_res, img_save_path = run(
-            instance.document_file.path, instance.document_file.path.split(".")[0]
-        )
-        # 将返回的结果保存到KeyInformation模型中
-        result_img = img_save_path.replace(
-            "/root/BS/Intelligent-Underwriting-System/server/media", ""
-        )
-        instance.status = "分析完成"
-        instance.save()
-        # 对re_res进行处理
-        def get_key_information(result):
-            key_information = []
-            for item in result:
-                temp_data = {}
-                for sub_item in item:
-                    if sub_item["pred"] == "QUESTION":
-                        temp_data["question"] = sub_item["transcription"]
-                    elif sub_item["pred"] == "ANSWER":
-                        temp_data["answer"] = sub_item["transcription"]
-                key_information.append(temp_data)
-            return key_information
-        
-        key_information = get_key_information(re_res)
-
-        KeyInformation.objects.create(
-            insurance_document_id=instance,
-            key_information=key_information,
-            result=re_res,
-            result_img=result_img,
+    def __str__(self) -> str:
+        return (
+            "上传时间: "
+            + self.upload_time.strftime("%Y-%m-%d %H:%M:%S")
+            + ", 状态: "
+            + self.status
         )
 
 
@@ -182,10 +216,11 @@ class SystemLog(models.Model):
 
 
 if __name__ == "__main__":
-
     re_res, img_save_path = run(
         "/root/BS/Intelligent-Underwriting-System/server/media/documents/2023/05/09/机动车交通事故责任强制保险单.jpg",
         "/root/BS/Intelligent-Underwriting-System/server/media/documents/2023/05/09/机动车交通事故责任强制保险单",
     )
     # 将返回的结果保存到KeyInformation模型中
     # KeyInformation.objects.create(insurance_document_id=instance,result = re_res, result_img = img_save_path, **kwargs)
+
+
